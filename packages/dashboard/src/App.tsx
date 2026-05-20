@@ -190,20 +190,41 @@ function HealthView({ health }: { health?: HealthStats }) {
 }
 
 function EmptyState() {
-  return <div class="empty-state"><h2>No traces yet</h2><p>Run <code>agent-prism demo</code> or wrap an agent function to populate the dashboard.</p></div>;
+  return <div class="empty-state"><h2>No traces yet</h2><p>Run <code>agent-prism demo</code> or <code>agentprism demo</code> to populate the dashboard.</p></div>;
 }
 
 function useChart(id: string, labels: string[], values: number[], type: 'bar' | 'line') {
   useEffect(() => {
     const element = document.getElementById(id) as HTMLCanvasElement | null;
     if (!element) return;
+    const colors = chartColors(element);
     const chart = new Chart(element, {
       type,
-      data: { labels, datasets: [{ label: 'USD', data: values, borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.18)', tension: 0.35 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      data: { labels, datasets: [{ label: 'USD', data: values, borderColor: colors.accent, backgroundColor: colors.accentSoft, tension: 0.35 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        color: colors.text,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: colors.grid }, ticks: { color: colors.muted } },
+          y: { beginAtZero: true, grid: { color: colors.grid }, ticks: { color: colors.muted } }
+        }
+      }
     });
     return () => chart.destroy();
   }, [id, labels.join('|'), values.join('|'), type]);
+}
+
+function chartColors(element: HTMLElement) {
+  const style = getComputedStyle(element);
+  return {
+    accent: style.getPropertyValue('--accent').trim() || '#2563eb',
+    accentSoft: style.getPropertyValue('--accent-soft').trim() || 'rgba(37,99,235,0.18)',
+    text: style.getPropertyValue('--text').trim() || '#17202a',
+    muted: style.getPropertyValue('--muted').trim() || '#64748b',
+    grid: style.getPropertyValue('--line').trim() || '#d9e2ec'
+  };
 }
 
 function flattenCalls(tree: RunTree[]): Array<NonNullable<Inspectable>> {

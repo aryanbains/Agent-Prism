@@ -1,10 +1,19 @@
 # Agent Prism
 
-Drop-in tracing for any agent pipeline. Local SQLite, zero config, real costs.
+Drop-in tracing for agent pipelines. Local SQLite, real costs, and a dashboard bundled with the npm package.
 
-See the workspace root README for the full guide. The published package contains the SDK, CLI, Hono dashboard server, static dashboard assets, parser scaffolds, and TypeScript types.
+## Install
 
-## Quick Start
+```sh
+npm install agent-prism
+npx agent-prism init --db ./agent-prism.db
+npx agent-prism demo --db ./agent-prism.db
+npx agent-prism dashboard --db ./agent-prism.db
+```
+
+`agentprism` is also published as a CLI alias.
+
+## SDK
 
 ```ts
 import { createTracer } from 'agent-prism';
@@ -15,31 +24,40 @@ await traced({ accountId: 'acct_123' });
 prism.shutdown();
 ```
 
+## Provider Middleware
+
+```ts
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+import { createTracer, withAnthropic, withOpenAI, withOpenRouter } from 'agent-prism';
+
+const prism = createTracer();
+const openai = withOpenAI(new OpenAI(), prism);
+const anthropic = withAnthropic(new Anthropic(), prism);
+const openrouter = withOpenRouter(new OpenAI({ baseURL: 'https://openrouter.ai/api/v1' }), prism);
+```
+
+OpenAI and Anthropic SDK-shaped calls are first-class. OpenRouter is supported through the OpenAI-compatible API and preserves provider-reported `usage.cost` when present.
+
 ## CLI
 
-```bash
+```sh
 agent-prism init --db ./agent-prism.db
 agent-prism demo --db ./agent-prism.db
 agent-prism import --db ./agent-prism.db --file ./openclaw.jsonl --parser openclaw
-agent-prism import --db ./agent-prism.db --file "$env:HERMES_HOME\logs\agent.log" --parser hermes
+agent-prism import --db ./agent-prism.db --file "$HERMES_HOME/logs/agent.log" --parser hermes
 agent-prism dashboard --db ./agent-prism.db
 agent-prism stats --db ./agent-prism.db
 ```
 
-## OpenRouter Live Smoke Test
+## Published Package Contents
 
-```bash
-$env:OPENROUTER_API_KEY='...'
-npm run live:openrouter -w agent-prism
-```
+The npm tarball includes:
 
-Defaults:
+- `dist/index.js` and `dist/index.cjs`
+- `dist/server/app.js` and `dist/server/app.cjs`
+- `dist/parsers/index.js` and `dist/parsers/index.cjs`
+- `dist/cli/index.js`
+- `dist/dashboard/index.html` and bundled dashboard assets
 
-- OpenAI model: `openai/gpt-4.1-nano`
-- Anthropic model: `anthropic/claude-3-haiku`
-- Request rounds: `OPENROUTER_REQUESTS=1` by default, two requests total
-- Budget guard: `OPENROUTER_BUDGET_USD=0.50` by default
-
-Override with `OPENROUTER_OPENAI_MODEL`, `OPENROUTER_ANTHROPIC_MODEL`, `OPENROUTER_REQUESTS`, `OPENROUTER_MAX_TOKENS`, and `OPENROUTER_BUDGET_USD`.
-
-If you want the absolute cheapest paid OpenAI option, use `openai/gpt-5-nano`. If you want the absolute cheapest OpenAI-branded option overall, use `openai/gpt-oss-20b:free`.
+`prepack` builds the SDK, CLI, and dashboard before package creation.

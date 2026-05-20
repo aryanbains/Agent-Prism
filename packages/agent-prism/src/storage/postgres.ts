@@ -12,6 +12,10 @@ import type {
 } from '../types.js';
 
 export class PostgresStorageAdapter implements StorageAdapter {
+  /**
+   * @experimental PostgreSQL schema parity is intentionally not enabled in v0.1.
+   * Use SQLite for supported local tracing until the SQL parity layer lands.
+   */
   readonly kind = 'postgres';
   private pool: any;
 

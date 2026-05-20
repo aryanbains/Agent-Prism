@@ -9,8 +9,8 @@
     "packages/dashboard"
   ],
   "scripts": {
-    "build": "npm run build -w agent-prism && npm run build -w @agent-prism/dashboard",
-    "build:js": "npm run build -w agent-prism",
+    "build": "npm run build -w agent-prism",
+    "build:js": "npm run build:lib -w agent-prism && npm run build:cli -w agent-prism",
     "build:dashboard": "npm run build -w @agent-prism/dashboard",
     "typecheck": "npm run typecheck -w agent-prism && npm run typecheck -w @agent-prism/dashboard",
     "test": "npm run test -w agent-prism",

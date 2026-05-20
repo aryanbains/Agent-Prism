@@ -4,8 +4,15 @@
   "description": "Drop-in tracing for any agent pipeline. Local SQLite, zero config, real costs.",
   "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.18"
+  },
   "bin": {
-    "agent-prism": "./dist/cli/index.js"
+    "agent-prism": "./dist/cli/index.js",
+    "agentprism": "./dist/cli/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -32,9 +39,10 @@
     "README.md"
   ],
   "scripts": {
-    "build": "npm run build:lib && npm run build:cli",
+    "build": "npm run build:lib && npm run build:cli && npm run build:dashboard",
     "build:lib": "tsup src/index.ts src/server/app.ts src/parsers/index.ts --format esm,cjs --dts --sourcemap --splitting false --clean",
     "build:cli": "tsup src/cli/index.ts --out-dir dist/cli --format esm --sourcemap --splitting false --clean false",
+    "build:dashboard": "npm run build -w @agent-prism/dashboard",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -42,7 +50,9 @@
     "benchmark": "tsx benchmarks/trace-overhead.ts",
     "dev:cli": "tsx src/cli/index.ts",
     "seed": "tsx examples/seed-demo.ts",
-    "live:openrouter": "tsx examples/openrouter-live.ts"
+    "live:openrouter": "tsx examples/openrouter-live.ts",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",

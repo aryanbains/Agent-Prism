@@ -1,19 +1,35 @@
 # Agent Prism
 
-Drop-in tracing for agent pipelines. Local SQLite, zero hosted account, real token/cost tracking, and a dashboard you can run on your own machine.
+Drop-in tracing for agent pipelines. Local SQLite, real token/cost tracking, and a dashboard that ships with the npm package.
 
 Agent Prism is not another agent framework. Keep your existing agents, tool calls, OpenAI/Anthropic/OpenRouter clients, Hermes/OpenClaw workflows, or Python scripts. Add the tracer around them and Agent Prism records what happened: agent runs, parent/child handoffs, tool calls, model calls, latency, errors, token usage, and USD cost.
 
-## Quick Start
+## Install
 
-```powershell
-npm install
-npm run build
-npm run seed -w agent-prism
-npm exec -w agent-prism -- agent-prism dashboard --db ./agent-prism.db
+For app users:
+
+```sh
+npm install agent-prism
+npx agent-prism init --db ./agent-prism.db
+npx agent-prism demo --db ./agent-prism.db
+npx agent-prism dashboard --db ./agent-prism.db
+```
+
+The CLI also ships an `agentprism` alias:
+
+```sh
+npx agentprism dashboard --db ./agent-prism.db
 ```
 
 Open `http://127.0.0.1:4242` if the browser does not open automatically.
+
+For contributors working from this repository:
+
+```sh
+npm install
+npm run build
+npm exec -w agent-prism -- agent-prism dashboard --db ./agent-prism.db
+```
 
 ## SDK
 
@@ -34,39 +50,30 @@ await tracedAgent({ accountId: 'acct_123' });
 prism.shutdown();
 ```
 
-## Manual Spans
+## OpenAI, Anthropic, And OpenRouter
 
-```ts
-const run = prism.startRun('orchestrator-agent', { input: { goal: 'renewal email' } });
-const child = run.startChild('finance-agent', { input: { accountId: 'acct_123' } });
-
-child.recordModelCall({
-  provider: 'anthropic',
-  method: 'messages.create',
-  model: 'claude-sonnet-4-6',
-  tokens: { input: 1000, output: 500 },
-  output: { text: 'Approved' }
-});
-
-child.end({ output: { score: 92 } });
-run.end({ output: { complete: true } });
-```
-
-## Provider Middleware
+OpenAI and Anthropic are first-class. OpenRouter is supported through its OpenAI-compatible endpoint and preserves OpenRouter-reported `usage.cost` when present.
 
 ```ts
 import OpenAI from 'openai';
-import { createTracer, withOpenAI } from 'agent-prism';
+import Anthropic from '@anthropic-ai/sdk';
+import { createTracer, withAnthropic, withOpenAI, withOpenRouter } from 'agent-prism';
 
 const prism = createTracer();
-const openai = withOpenAI(new OpenAI(), prism);
+
+const openai = withOpenAI(new OpenAI({ apiKey: process.env.OPENAI_API_KEY }), prism);
+const anthropic = withAnthropic(new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }), prism);
+const openrouter = withOpenRouter(new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: 'https://openrouter.ai/api/v1'
+}), prism);
 ```
 
-`withOpenAI`, `withAnthropic`, and `withPrism` intercept SDK-shaped calls and record provider, method, model, latency, usage, cost, inputs, outputs, and failures. OpenRouter works through its OpenAI-compatible endpoint and keeps OpenRouter-reported `usage.cost` when available.
+`withPrism` is also exported for custom SDK-shaped clients.
 
 ## CLI
 
-```powershell
+```sh
 agent-prism init --db ./agent-prism.db
 agent-prism demo --db ./agent-prism.db
 agent-prism dashboard --db ./agent-prism.db
@@ -77,15 +84,17 @@ agent-prism export --format csv --db ./agent-prism.db
 
 Import Hermes/OpenClaw-style logs:
 
-```powershell
+```sh
 agent-prism import --db ./agent-prism-openclaw.db --file ./logs/openclaw.jsonl --parser openclaw
-agent-prism import --db ./agent-prism-hermes.db --file ./logs/hermes.jsonl --parser hermes
+agent-prism import --db ./agent-prism-hermes.db --file ./logs/hermes.log --parser hermes
 agent-prism import --db ./agent-prism-imported.db --file ./logs/agent.log --parser auto
 ```
 
 ## Dashboard
 
-The dashboard is local and reads from SQLite while your agent writes to it.
+The dashboard is bundled into the npm package under `dist/dashboard` by `npm run build` and `npm pack`. The CLI serves those files directly, so installed users do not need a local Vite build.
+
+Views:
 
 - Session Timeline: recursive agent tree with tools, model calls, status, latency, and cost.
 - Cost Dashboard: cost by agent, cost over time, token split, and expensive calls.
@@ -99,7 +108,7 @@ Agent Prism supports Hermes/OpenClaw in two ways:
 - Native tracing: wrap any code you control with the SDK.
 - Log import: use `agent-prism import` with the built-in `hermes`, `openclaw`, or `auto` parser.
 
-The OpenClaw parser accepts Agent Prism-style JSONL events and real `openclaw logs --json` operational log output. The Hermes parser accepts structured JSONL events, compact Hermes status lines, and real `$env:HERMES_HOME\logs\agent.log` / `errors.log` operational logs.
+The OpenClaw parser accepts Agent Prism-style JSONL events and real `openclaw logs --json` operational log output. The Hermes parser accepts structured JSONL events, compact Hermes status lines, and real `$HERMES_HOME/logs/agent.log` / `errors.log` operational logs.
 
 Checked-in fixtures:
 
@@ -110,10 +119,23 @@ Checked-in fixtures:
 
 ## OpenRouter Live Test
 
-Set your key in the terminal, then run:
+Bash/macOS/Linux:
+
+```sh
+export OPENROUTER_API_KEY="your_key_here"
+export OPENROUTER_REQUESTS="5"
+export OPENROUTER_BUDGET_USD="0.50"
+export OPENROUTER_MAX_TOKENS="16"
+npm run live:openrouter -w agent-prism
+```
+
+PowerShell/Windows:
 
 ```powershell
 $env:OPENROUTER_API_KEY="your_key_here"
+$env:OPENROUTER_REQUESTS="5"
+$env:OPENROUTER_BUDGET_USD="0.50"
+$env:OPENROUTER_MAX_TOKENS="16"
 npm run live:openrouter -w agent-prism
 ```
 
@@ -124,88 +146,101 @@ Defaults:
 - Requests: `1` round, which means two requests total
 - Budget guard: `$0.50`
 
-More effective live testing, still budget-limited:
-
-```powershell
-$env:OPENROUTER_REQUESTS="5"
-$env:OPENROUTER_BUDGET_USD="0.50"
-$env:OPENROUTER_MAX_TOKENS="16"
-npm run live:openrouter -w agent-prism
-```
-
-The script writes `./agent-prism-openrouter.db` relative to the directory where you invoked `npm run`, prints every response's usage/cost, and fails if the cumulative reported cost exceeds the budget.
+The script writes `./agent-prism-openrouter.db`, prints every response's usage/cost, and fails if cumulative reported cost exceeds the budget.
 
 ## Framework Matrix
 
 | Agent / framework | Status |
 | --- | --- |
 | Custom JavaScript/TypeScript agents | Wrap/manual span API implemented |
-| OpenAI SDK-shaped calls | Proxy middleware implemented |
-| Anthropic SDK-shaped calls | Proxy middleware implemented |
-| OpenRouter | Live script and OpenAI-compatible proxy implemented |
+| OpenAI SDK-shaped calls | `withOpenAI` implemented and tested |
+| Anthropic SDK-shaped calls | `withAnthropic` implemented and tested |
+| OpenRouter | `withOpenRouter`, `withPrism`, live script, and `usage.cost` preservation implemented |
 | Vercel AI SDK | Use `withPrism` around compatible clients or manual spans |
 | LangChain.js | Manual callback integration via `recordToolCall` / `recordModelCall` |
-| Hermes | Structured parser plus real `$env:HERMES_HOME\logs\*.log` import implemented |
+| Hermes | Structured parser plus real `$HERMES_HOME/logs/*.log` import implemented |
 | OpenClaw | Structured parser plus real `openclaw logs --json` import implemented |
 | Python agents / CrewAI-style code | `agent-prism-py` writes the same SQLite schema |
 
 ## Self-Test Checklist
 
-```powershell
+```sh
 npm run typecheck
 npm test
 npm run build
 npm run test:e2e
 npm run benchmark
+npm run python:test
+npm pack -w agent-prism --dry-run
 ```
 
 Parser import smoke:
 
-```powershell
+```sh
 node packages/agent-prism/dist/cli/index.js import --db ./agent-prism-openclaw-fixture.db --file packages/agent-prism/tests/fixtures/openclaw.jsonl --parser auto
 node packages/agent-prism/dist/cli/index.js stats --db ./agent-prism-openclaw-fixture.db
 node packages/agent-prism/dist/cli/index.js dashboard --db ./agent-prism-openclaw-fixture.db --no-open
 ```
 
-OpenClaw local smoke after installing `openclaw`:
-
-```powershell
-openclaw --version
-openclaw onboard --non-interactive --accept-risk --mode local --auth-choice skip --skip-channels --skip-daemon --skip-health --skip-search --skip-ui
-openclaw doctor --non-interactive
-openclaw status --json --timeout 5000
-```
-
 Hermes local smoke after installing `hermes`:
 
-```powershell
-hermes --help
+```sh
 hermes --version
 hermes doctor
 hermes status
 hermes logs list
+```
+
+PowerShell import from the configured Hermes home:
+
+```powershell
 $env:HERMES_HOME = [Environment]::GetEnvironmentVariable("HERMES_HOME", "User")
 node packages/agent-prism/dist/cli/index.js import --db ./agent-prism-hermes-live.db --file "$env:HERMES_HOME\logs\agent.log" --parser hermes
 ```
 
-Python package smoke, when Python works in your environment:
+Bash import from the configured Hermes home:
 
-```powershell
-python -m pytest packages/agent-prism-py/tests
+```sh
+agent-prism import --db ./agent-prism-hermes-live.db --file "$HERMES_HOME/logs/agent.log" --parser hermes
 ```
 
-## Comparison
+OpenClaw local smoke after installing `openclaw`:
 
-| Tool | Agent Prism | LangSmith / Langfuse / Phoenix |
-| --- | --- | --- |
-| Setup | Local SQLite, no account | Usually server/cloud oriented |
-| Scope | Lightweight agent tracing | Broader observability/eval platforms |
-| Dashboard | Local Hono + static Preact | Hosted or heavier local stacks |
-| Best for | Local/indie agent builders and integration debugging | Teams needing full hosted observability/evals |
+```sh
+openclaw --version
+openclaw health --json --timeout 5000
+openclaw logs --json --limit 20 --timeout 5000 > openclaw-live.jsonl
+agent-prism import --db ./agent-prism-openclaw-live.db --file ./openclaw-live.jsonl --parser openclaw
+```
+
+## Publishing
+
+The package is configured for public npm publishing but this repository does not publish automatically.
+
+Before publishing:
+
+```sh
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e
+npm run benchmark
+npm run python:test
+npm pack -w agent-prism --dry-run
+```
+
+Then publish intentionally:
+
+```sh
+npm publish -w agent-prism --access public
+```
+
+`prepack` builds SDK, CLI, and dashboard assets. `prepublishOnly` runs typecheck, tests, and build.
 
 ## Current Notes
 
-- SQLite is the production default. PostgreSQL is present as an adapter scaffold, not the recommended v0.1 path.
+- SQLite is the supported storage path for v0.1.
+- PostgreSQL is exported only as an `@experimental` adapter scaffold until schema parity lands.
 - Tracing failures default to warning/continuation behavior so observability does not break the agent being observed.
-- No npm or PyPI publishing is performed by this repo setup.
+- Root `package-lock.json` is intentionally ignored for the library workspace; CI uses `npm install`.
 - Rotate any provider key that was pasted into a shared chat or terminal transcript.

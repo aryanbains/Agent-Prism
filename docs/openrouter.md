@@ -28,6 +28,15 @@ That is far below one cent and far below the `$0.50` cap.
 
 ## Command
 
+Bash/macOS/Linux:
+
+```sh
+export OPENROUTER_API_KEY="your_key_here"
+npm run live:openrouter -w agent-prism
+```
+
+PowerShell/Windows:
+
 ```powershell
 $env:OPENROUTER_API_KEY="your_key_here"
 npm run live:openrouter -w agent-prism
@@ -42,6 +51,15 @@ $env:OPENROUTER_MAX_TOKENS="16"
 npm run live:openrouter -w agent-prism
 ```
 
+Bash/macOS/Linux equivalent:
+
+```sh
+export OPENROUTER_REQUESTS="5"
+export OPENROUTER_BUDGET_USD="0.50"
+export OPENROUTER_MAX_TOKENS="16"
+npm run live:openrouter -w agent-prism
+```
+
 `OPENROUTER_REQUESTS` is the number of rounds. Each round calls the configured OpenAI route and Anthropic route, so `5` means `10` live requests. The script fails if cumulative OpenRouter-reported `usage.cost` exceeds `OPENROUTER_BUDGET_USD`.
 
 Optional model overrides:
@@ -52,3 +70,16 @@ $env:OPENROUTER_ANTHROPIC_MODEL="anthropic/claude-3.5-haiku"
 ```
 
 The script uses the OpenRouter OpenAI-compatible endpoint and prints actual usage and cost returned by OpenRouter. The default trace DB path is resolved relative to the directory where you invoke `npm run`, not the package subfolder.
+
+For application code, use `withOpenRouter` around an OpenAI-compatible client:
+
+```ts
+import OpenAI from 'openai';
+import { createTracer, withOpenRouter } from 'agent-prism';
+
+const prism = createTracer();
+const openrouter = withOpenRouter(new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: 'https://openrouter.ai/api/v1'
+}), prism);
+```

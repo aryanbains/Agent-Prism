@@ -14,6 +14,10 @@ export function withAnthropic<T extends object>(client: T, tracer: Tracer, optio
   return withPrism(client, tracer, { ...options, provider: 'anthropic' });
 }
 
+export function withOpenRouter<T extends object>(client: T, tracer: Tracer, options: Omit<MiddlewareOptions, 'provider'> = {}): T {
+  return withPrism(client, tracer, { ...options, provider: 'openrouter' });
+}
+
 function createProxy(target: object, tracer: Tracer, options: MiddlewareOptions, path: string[], cache: WeakMap<object, object>): object {
   if (cache.has(target)) {
     return cache.get(target)!;
@@ -165,6 +169,9 @@ function detectProvider(method: string, output?: unknown, args?: unknown[]): str
   const response = output as any;
   const request = args?.[0] as any;
   const model = response?.model ?? request?.model;
+  if (typeof response?.usage?.cost === 'number' || typeof response?.response?.usage?.cost === 'number') {
+    return 'openrouter';
+  }
   if (typeof model === 'string') {
     if (model.startsWith('anthropic/')) return 'anthropic';
     if (model.startsWith('openai/')) return 'openai';
