@@ -1,0 +1,4 @@
+2026-05-20 18:59:37,718 INFO hermes_cli.plugins: Plugin 'xai' registered image_gen provider: xai
+2026-05-20 18:59:38,397 INFO hermes_cli.plugins: Plugin discovery complete: 26 found, 22 enabled
+2026-05-20 18:59:39,164 WARNING agent.auxiliary_client: Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 19:00:39.
+2026-05-20 18:59:39,197 ERROR agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).

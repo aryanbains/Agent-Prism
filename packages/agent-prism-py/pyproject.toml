@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-prism-py"
+version = "0.1.0"
+description = "Python tracer that writes Agent Prism-compatible SQLite traces."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Agent Prism contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

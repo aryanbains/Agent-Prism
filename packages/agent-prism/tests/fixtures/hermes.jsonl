@@ -1,0 +1,3 @@
+{"framework":"hermes","type":"run","runId":"run_hermes_fixture_root","sessionId":"ses_hermes_fixture","agentName":"hermes-orchestrator","status":"success","latencyMs":125,"startedAt":"2026-05-20T10:00:00.000Z","endedAt":"2026-05-20T10:00:00.125Z"}
+{"framework":"hermes","type":"tool","runId":"run_hermes_fixture_root","toolName":"session_search","input":{"query":"invoice"},"output":{"hits":3},"latencyMs":40,"calledAt":"2026-05-20T10:00:00.020Z"}
+{"framework":"hermes","type":"model","runId":"run_hermes_fixture_root","provider":"openrouter","method":"chat.completions.create","model":"anthropic/claude-3-haiku","usage":{"input":16,"output":7,"total":23},"costUSD":0.00001275}

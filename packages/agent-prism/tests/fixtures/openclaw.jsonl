@@ -1,0 +1,4 @@
+{"framework":"openclaw","type":"run","runId":"run_openclaw_fixture_root","sessionId":"ses_openclaw_fixture","agentName":"gateway-agent","status":"success","latencyMs":210}
+{"framework":"openclaw","type":"run","runId":"run_openclaw_fixture_child","sessionId":"ses_openclaw_fixture","parentRunId":"run_openclaw_fixture_root","agentName":"calendar-agent","status":"success","latencyMs":88}
+{"framework":"openclaw","type":"tool","runId":"run_openclaw_fixture_child","toolName":"sessions_send","input":{"target":"self"},"output":{"ok":true},"latencyMs":33}
+{"framework":"openclaw","type":"model","runId":"run_openclaw_fixture_child","provider":"openrouter","method":"chat.completions.create","model":"openai/gpt-4.1-nano","usage":{"prompt_tokens":15,"completion_tokens":3,"total_tokens":18},"cost_usd":0.0000027}

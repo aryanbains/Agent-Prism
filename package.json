@@ -1,0 +1,26 @@
+{
+  "name": "agent-prism-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent Prism monorepo: drop-in tracing for agent pipelines.",
+  "type": "module",
+  "workspaces": [
+    "packages/agent-prism",
+    "packages/dashboard"
+  ],
+  "scripts": {
+    "build": "npm run build -w agent-prism && npm run build -w @agent-prism/dashboard",
+    "build:js": "npm run build -w agent-prism",
+    "build:dashboard": "npm run build -w @agent-prism/dashboard",
+    "typecheck": "npm run typecheck -w agent-prism && npm run typecheck -w @agent-prism/dashboard",
+    "test": "npm run test -w agent-prism",
+    "test:e2e": "npm run test:e2e -w agent-prism",
+    "benchmark": "npm run benchmark -w agent-prism",
+    "dev:dashboard": "npm run dev -w @agent-prism/dashboard",
+    "python:test": "python -m pytest packages/agent-prism-py/tests",
+    "clean": "node scripts/clean.mjs"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}
