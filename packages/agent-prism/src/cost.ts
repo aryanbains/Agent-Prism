@@ -21,6 +21,7 @@ export const DEFAULT_MODEL_PRICES: Record<string, CostModel> = {
 
 export class CostCalculator {
   private readonly models: Record<string, CostModel>;
+  private readonly warnedModels = new Set<string>();
 
   constructor(models: Record<string, CostModel> = {}) {
     this.models = { ...DEFAULT_MODEL_PRICES, ...models };
@@ -34,6 +35,7 @@ export class CostCalculator {
 
     const pricing = this.lookup(model);
     if (!pricing) {
+      this.warnMissingPricing(model);
       return 0;
     }
 
@@ -52,5 +54,13 @@ export class CostCalculator {
     }
     const normalized = model.toLowerCase();
     return Object.entries(this.models).find(([key]) => normalized.includes(key.toLowerCase()))?.[1];
+  }
+
+  private warnMissingPricing(model: string): void {
+    if (this.warnedModels.has(model)) {
+      return;
+    }
+    this.warnedModels.add(model);
+    console.warn(`No pricing found for model ${model}, cost set to 0. Pass a models config to override.`);
   }
 }

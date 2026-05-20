@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { createTracer, SqliteStorageAdapter, withAnthropic, withOpenAI, withOpenRouter, withPrism } from '../src/index.js';
+import { createTracer, SqliteStorageAdapter, withAnthropic, withGemini, withOpenAI, withOpenRouter, withPrism, withVercelAI } from '../src/index.js';
 
 describe('withOpenAI proxy middleware', () => {
   test('records usage and cost from SDK-shaped responses', async () => {
@@ -100,6 +100,49 @@ describe('withOpenAI proxy middleware', () => {
     const modelCalls = storage.getModelCallsByRunIds([run.id]);
     expect(modelCalls[0]!.provider).toBe('openrouter');
     expect(modelCalls[0]!.costUSD).toBe(0.00002);
+    storage.close();
+  });
+
+  test('records Gemini SDK-shaped responses through withGemini', async () => {
+    const dbPath = join(mkdtempSync(join(tmpdir(), 'agent-prism-')), 'trace.db');
+    const lens = createTracer({ dbPath, onError: 'throw', models: { 'gemini-2.5-flash': { inputPer1M: 0.35, outputPer1M: 0.53 } } });
+    const run = lens.startRun('gemini-agent');
+    const client = withGemini({
+      models: {
+        generateContent: async (_request: { model: string }) => ({ model: 'gemini-2.5-flash', usage: { input_tokens: 20, output_tokens: 10, total_tokens: 30 }, text: 'ok' })
+      }
+    }, lens);
+
+    await run.runInContext(() => client.models.generateContent({ model: 'gemini-2.5-flash' }));
+    run.end();
+    lens.shutdown();
+
+    const storage = new SqliteStorageAdapter(dbPath);
+    storage.init();
+    const modelCalls = storage.getModelCallsByRunIds([run.id]);
+    expect(modelCalls[0]!.provider).toBe('google');
+    expect(modelCalls[0]!.model).toBe('gemini-2.5-flash');
+    expect(modelCalls[0]!.costUSD).toBeGreaterThan(0);
+    storage.close();
+  });
+
+  test('records Vercel AI style responses through withVercelAI', async () => {
+    const dbPath = join(mkdtempSync(join(tmpdir(), 'agent-prism-')), 'trace.db');
+    const lens = createTracer({ dbPath, onError: 'throw' });
+    const run = lens.startRun('vercel-agent');
+    const client = withVercelAI({
+      generateText: async (_request: { model: string }) => ({ model: 'gpt-4.1-mini', usage: { input_tokens: 60, output_tokens: 12, total_tokens: 72 }, text: 'ok' })
+    }, lens);
+
+    await run.runInContext(() => client.generateText({ model: 'gpt-4.1-mini' }));
+    run.end();
+    lens.shutdown();
+
+    const storage = new SqliteStorageAdapter(dbPath);
+    storage.init();
+    const modelCalls = storage.getModelCallsByRunIds([run.id]);
+    expect(modelCalls[0]!.provider).toBe('vercel-ai');
+    expect(modelCalls[0]!.tokens.total).toBe(72);
     storage.close();
   });
 });

@@ -29,15 +29,17 @@ prism.shutdown();
 ```ts
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
-import { createTracer, withAnthropic, withOpenAI, withOpenRouter } from 'agent-prism';
+import { createTracer, withAnthropic, withGemini, withOpenAI, withOpenRouter, withVercelAI } from 'agent-prism';
 
 const prism = createTracer();
 const openai = withOpenAI(new OpenAI(), prism);
 const anthropic = withAnthropic(new Anthropic(), prism);
 const openrouter = withOpenRouter(new OpenAI({ baseURL: 'https://openrouter.ai/api/v1' }), prism);
+const gemini = withGemini(googleGenAIClient, prism);
+const vercelAI = withVercelAI(vercelAIClient, prism);
 ```
 
-OpenAI and Anthropic SDK-shaped calls are first-class. OpenRouter is supported through the OpenAI-compatible API and preserves provider-reported `usage.cost` when present.
+OpenAI and Anthropic SDK-shaped calls are first-class. OpenRouter is supported through the OpenAI-compatible API and preserves provider-reported `usage.cost` when present. Gemini and Vercel AI SDK-shaped clients now have first-party convenience wrappers as well.
 
 ## CLI
 

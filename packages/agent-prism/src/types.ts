@@ -106,6 +106,8 @@ export interface EndRunOptions {
   status?: TraceStatus;
   tokens?: Partial<TokenUsage>;
   costUSD?: number;
+  error?: string;
+  errorStack?: string;
   metadata?: Record<string, unknown>;
 }
 

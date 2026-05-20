@@ -4,6 +4,8 @@ Drop-in tracing for agent pipelines. Local SQLite, real token/cost tracking, and
 
 Agent Prism is not another agent framework. Keep your existing agents, tool calls, OpenAI/Anthropic/OpenRouter clients, Hermes/OpenClaw workflows, or Python scripts. Add the tracer around them and Agent Prism records what happened: agent runs, parent/child handoffs, tool calls, model calls, latency, errors, token usage, and USD cost.
 
+![Agent Prism demo](docs/assets/agent-prism-demo.gif)
+
 ## Install
 
 For app users:
@@ -50,14 +52,14 @@ await tracedAgent({ accountId: 'acct_123' });
 prism.shutdown();
 ```
 
-## OpenAI, Anthropic, And OpenRouter
+## OpenAI, Anthropic, OpenRouter, Gemini, And Vercel AI
 
-OpenAI and Anthropic are first-class. OpenRouter is supported through its OpenAI-compatible endpoint and preserves OpenRouter-reported `usage.cost` when present.
+OpenAI and Anthropic are first-class. OpenRouter is supported through its OpenAI-compatible endpoint and preserves OpenRouter-reported `usage.cost` when present. Gemini and Vercel AI SDK-shaped clients now have first-party convenience wrappers as well.
 
 ```ts
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
-import { createTracer, withAnthropic, withOpenAI, withOpenRouter } from 'agent-prism';
+import { createTracer, withAnthropic, withGemini, withOpenAI, withOpenRouter, withVercelAI } from 'agent-prism';
 
 const prism = createTracer();
 
@@ -67,6 +69,8 @@ const openrouter = withOpenRouter(new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
   baseURL: 'https://openrouter.ai/api/v1'
 }), prism);
+const gemini = withGemini(googleGenAIClient, prism);
+const vercelAI = withVercelAI(vercelAIClient, prism);
 ```
 
 `withPrism` is also exported for custom SDK-shaped clients.
@@ -155,8 +159,9 @@ The script writes `./agent-prism-openrouter.db`, prints every response's usage/c
 | Custom JavaScript/TypeScript agents | Wrap/manual span API implemented |
 | OpenAI SDK-shaped calls | `withOpenAI` implemented and tested |
 | Anthropic SDK-shaped calls | `withAnthropic` implemented and tested |
+| Gemini SDK-shaped calls | `withGemini` implemented and tested |
 | OpenRouter | `withOpenRouter`, `withPrism`, live script, and `usage.cost` preservation implemented |
-| Vercel AI SDK | Use `withPrism` around compatible clients or manual spans |
+| Vercel AI SDK | `withVercelAI` implemented; `withPrism` still works for custom-compatible clients |
 | LangChain.js | Manual callback integration via `recordToolCall` / `recordModelCall` |
 | Hermes | Structured parser plus real `$HERMES_HOME/logs/*.log` import implemented |
 | OpenClaw | Structured parser plus real `openclaw logs --json` import implemented |

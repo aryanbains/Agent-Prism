@@ -56,26 +56,37 @@ class Tracer:
         self.storage.upsert_run(run)
         return RunHandle(self, run.id, next_session_id)
 
-    def end_run(self, run: RunHandle, output: Any = None, status: str = "success", tokens: TokenUsage | None = None, cost_usd: float = 0.0) -> None:
-        row = self.storage.connection.execute("SELECT * FROM agent_runs WHERE id=?", (run.id,)).fetchone()
-        if not row:
+    def end_run(
+        self,
+        run: RunHandle,
+        output: Any = None,
+        status: str = "success",
+        tokens: TokenUsage | None = None,
+        cost_usd: float = 0.0,
+        error: str | None = None,
+        error_stack: str | None = None,
+    ) -> None:
+        stored = self.storage.get_run(run.id)
+        if not stored:
             return
-        started_at = datetime.fromisoformat(str(row["started_at"]).replace("Z", ""))
         ended_at = datetime.utcnow()
         agent_run = AgentRun(
             id=run.id,
             session_id=run.session_id,
-            agent_name=row["agent_name"],
-            parent_run_id=row["parent_run_id"],
-            triggered_by=row["triggered_by"],
-            input=None,
+            agent_name=stored.agent_name,
+            parent_run_id=stored.parent_run_id,
+            triggered_by=stored.triggered_by,
+            input=stored.input,
             output=output,
             status=status,  # type: ignore[arg-type]
-            started_at=started_at,
+            error=error or stored.error,
+            error_stack=error_stack or stored.error_stack,
+            started_at=stored.started_at,
             ended_at=ended_at,
-            latency_ms=int((ended_at - started_at).total_seconds() * 1000),
-            tokens=tokens or TokenUsage(),
-            cost_usd=cost_usd,
+            latency_ms=int((ended_at - stored.started_at).total_seconds() * 1000),
+            tokens=tokens or stored.tokens,
+            cost_usd=cost_usd or stored.cost_usd,
+            metadata=stored.metadata,
         )
         self.storage.upsert_run(agent_run)
 
@@ -113,12 +124,12 @@ class Tracer:
             raise
 
     def _fail_run(self, run: RunHandle, error: Exception) -> None:
-        self.end_run(run, status="failed")
-        self.storage.connection.execute(
-            "UPDATE agent_runs SET error=?, error_stack=?, status='failed' WHERE id=?",
-            (str(error), "".join(traceback.format_exception(error)), run.id),
+        self.end_run(
+            run,
+            status="failed",
+            error=str(error),
+            error_stack="".join(traceback.format_exception(error)),
         )
-        self.storage.connection.commit()
 
     def close(self) -> None:
         self.storage.close()

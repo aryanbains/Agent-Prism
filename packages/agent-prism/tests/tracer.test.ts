@@ -46,6 +46,60 @@ describe('Tracer', () => {
     lens.shutdown();
   });
 
+  test('preserves scheduled runs as a first-class trigger type', () => {
+    const dbPath = tempDb();
+    const lens = createTracer({ dbPath, onError: 'throw' });
+    const run = lens.startRun('nightly-sync', { triggeredBy: 'scheduled', input: { job: 'nightly' } });
+    run.end({ output: { ok: true } });
+    lens.shutdown();
+
+    const storage = new SqliteStorageAdapter(dbPath);
+    storage.init();
+    const stored = storage.getRunsBySession(run.sessionId)[0];
+    expect(stored?.triggeredBy).toBe('scheduled');
+    storage.close();
+  });
+
+  test('failRun writes the failure reason in a single terminal update', () => {
+    const runs = new Map<string, any>();
+    const upserts: any[] = [];
+    const refreshes: string[] = [];
+    const storage = {
+      kind: 'memory',
+      init: () => undefined,
+      close: () => undefined,
+      createSession: () => undefined,
+      upsertAgentRun: (run: any) => {
+        runs.set(run.id, structuredClone(run));
+        upserts.push(structuredClone(run));
+      },
+      insertToolCall: () => undefined,
+      insertModelCall: () => undefined,
+      refreshSession: (sessionId: string) => { refreshes.push(sessionId); },
+      listSessions: () => [],
+      getSession: () => undefined,
+      getRunsBySession: () => [],
+      getRun: (runId: string) => runs.get(runId),
+      getToolCallsByRunIds: () => [],
+      getToolCall: () => undefined,
+      getModelCallsByRunIds: () => [],
+      getModelCall: () => undefined,
+      getCostStats: () => ({ totalCostUSD: 0, totalTokens: { input: 0, output: 0, total: 0 }, costByAgent: [], costOverTime: [], expensiveCalls: [] }),
+      getHealthStats: () => ({ agents: [], failures: [] }),
+      exportTraces: () => ({ sessions: [], runs: [], toolCalls: [], modelCalls: [] }),
+      getLatestUpdatedAt: () => undefined,
+      recordParserImport: () => undefined
+    };
+    const lens = createTracer({ storage, onError: 'throw' });
+    const run = lens.startRun('fragile-agent', { input: { ok: false } });
+    lens.failRun(run, new Error('boom'));
+
+    expect(upserts).toHaveLength(2);
+    expect(upserts[1]!.status).toBe('failed');
+    expect(upserts[1]!.error).toBe('boom');
+    expect(refreshes).toHaveLength(1);
+  });
+
   test('onError warn does not break the wrapped function', async () => {
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const brokenStorage = {

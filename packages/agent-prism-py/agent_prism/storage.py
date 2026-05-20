@@ -129,6 +129,33 @@ class SqliteStorage:
         self.connection.commit()
         self.refresh_session(run.session_id)
 
+    def get_run(self, run_id: str) -> AgentRun | None:
+        row = self.connection.execute("SELECT * FROM agent_runs WHERE id=?", (run_id,)).fetchone()
+        if not row:
+            return None
+        return AgentRun(
+            id=row["id"],
+            session_id=row["session_id"],
+            agent_name=row["agent_name"],
+            parent_run_id=row["parent_run_id"],
+            triggered_by=row["triggered_by"],
+            input=None,
+            output=None,
+            status=row["status"],
+            error=row["error"],
+            error_stack=row["error_stack"],
+            started_at=datetime.fromisoformat(str(row["started_at"]).replace("Z", "")),
+            ended_at=datetime.fromisoformat(str(row["ended_at"]).replace("Z", "")) if row["ended_at"] else None,
+            latency_ms=row["latency_ms"],
+            tokens=TokenUsage(
+                input=row["tokens_input"],
+                output=row["tokens_output"],
+                cached=row["tokens_cached"],
+                total=row["tokens_total"],
+            ),
+            cost_usd=row["cost_usd"],
+        )
+
     def insert_tool_call(self, run_id: str, call_id: str, tool_name: str, input_value: Any, output: Any, latency_ms: int, status: str = "success", error: str | None = None) -> None:
         now = iso(datetime.utcnow())
         self.connection.execute(

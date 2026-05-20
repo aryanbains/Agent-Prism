@@ -18,6 +18,14 @@ export function withOpenRouter<T extends object>(client: T, tracer: Tracer, opti
   return withPrism(client, tracer, { ...options, provider: 'openrouter' });
 }
 
+export function withGemini<T extends object>(client: T, tracer: Tracer, options: Omit<MiddlewareOptions, 'provider'> = {}): T {
+  return withPrism(client, tracer, { ...options, provider: 'google' });
+}
+
+export function withVercelAI<T extends object>(client: T, tracer: Tracer, options: Omit<MiddlewareOptions, 'provider'> = {}): T {
+  return withPrism(client, tracer, { ...options, provider: 'vercel-ai' });
+}
+
 function createProxy(target: object, tracer: Tracer, options: MiddlewareOptions, path: string[], cache: WeakMap<object, object>): object {
   if (cache.has(target)) {
     return cache.get(target)!;
@@ -175,6 +183,13 @@ function detectProvider(method: string, output?: unknown, args?: unknown[]): str
   if (typeof model === 'string') {
     if (model.startsWith('anthropic/')) return 'anthropic';
     if (model.startsWith('openai/')) return 'openai';
+    if (model.startsWith('gemini') || model.startsWith('google/')) return 'google';
+  }
+  if (method.includes('generateContent')) {
+    return 'google';
+  }
+  if (method.endsWith('generateText') || method.endsWith('streamText')) {
+    return 'vercel-ai';
   }
   if (method.includes('messages') || response?.stop_reason || response?.usage?.input_tokens) {
     return 'anthropic';
@@ -190,7 +205,11 @@ function isKnownProviderMethod(method: string): boolean {
     'chat.completions.create',
     'responses.create',
     'completions.create',
-    'messages.create'
+    'messages.create',
+    'models.generateContent',
+    'models.generateContentStream',
+    'generateText',
+    'streamText'
   ].some((knownMethod) => method.endsWith(knownMethod));
 }
 

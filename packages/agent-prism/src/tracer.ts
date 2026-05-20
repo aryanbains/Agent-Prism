@@ -137,6 +137,8 @@ export class Tracer {
       ...stored,
       output: options.output,
       status: options.status ?? 'success',
+      error: options.error ?? stored.error,
+      errorStack: options.errorStack ?? stored.errorStack,
       endedAt,
       latencyMs: endedAt.getTime() - stored.startedAt.getTime(),
       tokens: explicitTokens,
@@ -149,27 +151,15 @@ export class Tracer {
   }
 
   failRun(runOrHandle: AgentRunHandle | string, error: unknown): void {
-    const runId = typeof runOrHandle === 'string' ? runOrHandle : runOrHandle.id;
-    this.endRun(runId, {
+    this.endRun(runOrHandle, {
       status: 'failed',
       output: undefined,
+      error: errorMessage(error),
+      errorStack: errorStack(error),
       metadata: {
         failureCapturedAt: new Date().toISOString()
       }
     });
-    const stored = this.readRun(runId);
-    if (!stored) {
-      return;
-    }
-    this.safeStorage('record run failure', () => this.storage.upsertAgentRun({
-      ...stored,
-      status: 'failed',
-      error: errorMessage(error),
-      errorStack: errorStack(error),
-      endedAt: stored.endedAt ?? new Date(),
-      latencyMs: stored.latencyMs ?? Date.now() - stored.startedAt.getTime()
-    }));
-    this.safeStorage('refresh failed session', () => this.storage.refreshSession(stored.sessionId));
   }
 
   timeoutRun(runOrHandle: AgentRunHandle | string, error: unknown = 'Timed out'): void {
