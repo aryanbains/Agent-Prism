@@ -4,12 +4,30 @@
   "description": "Drop-in tracing for any agent pipeline. Local SQLite, zero config, real costs.",
   "type": "module",
   "license": "MIT",
+  "homepage": "https://github.com/aryanbains/Agent-Prism#readme",
+  "bugs": {
+    "url": "https://github.com/aryanbains/Agent-Prism/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aryanbains/Agent-Prism.git"
+  },
+  "keywords": [
+    "agent",
+    "tracing",
+    "observability",
+    "llm",
+    "ai",
+    "sqlite",
+    "openai",
+    "anthropic"
+  ],
   "engines": {
     "node": ">=18.18"
   },
   "bin": {
-    "agent-prism": "./dist/cli/index.js",
-    "agentprism": "./dist/cli/index.js"
+    "agent-prism": "dist/cli/index.js",
+    "agentprism": "dist/cli/index.js"
   },
   "publishConfig": {
     "access": "public"

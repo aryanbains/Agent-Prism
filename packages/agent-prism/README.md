@@ -2,6 +2,10 @@
 
 Drop-in tracing for agent pipelines. Local SQLite, real costs, and a dashboard bundled with the npm package.
 
+![Agent Prism demo](https://raw.githubusercontent.com/aryanbains/Agent-Prism/main/docs/assets/agent-prism-demo.gif)
+
+Full docs, launch notes, and self-test steps live in the GitHub README: https://github.com/aryanbains/Agent-Prism#readme
+
 ## Install
 
 ```sh
@@ -12,6 +16,8 @@ npx agent-prism dashboard --db ./agent-prism.db
 ```
 
 `agentprism` is also published as a CLI alias.
+
+If the browser does not open automatically, visit `http://127.0.0.1:4242`.
 
 ## SDK
 
